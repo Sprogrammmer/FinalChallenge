@@ -13,6 +13,7 @@ body {
 }
 
 /* Estilos del panel de control */
+
 .dashboard {
   text-align: center;
 }
@@ -56,7 +57,8 @@ body {
 }
 
 /* Estilos responsivos */
-@media screen and (max-width: 768px) {
+
+@media screen and (max-width: 620px) {
   .dashboard-metrics {
     grid-template-columns: 1fr;
   }
@@ -187,5 +189,11 @@ body {
   }
 }
 
+/* Estilos responsivos */
 
+@media screen and (max-width: 620px) {
 
+  .loader {
+    margin: 150px;
+  }
+}

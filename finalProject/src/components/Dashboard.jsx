@@ -52,10 +52,12 @@ const Dashboard = () => {
   }, []);
 
   if (isLoading) {
-    return   <div class="loader">
-    <span class="loader-text">loading</span>
-      <span class="load"></span>
-  </div>;
+    return(
+        <div className="loader">
+            <span className="loader-text">loading</span>
+            <span className="load"></span>
+        </div>
+    )
   }
 
   if (error) {
