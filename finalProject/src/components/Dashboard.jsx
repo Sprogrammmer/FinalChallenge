@@ -1,101 +1,77 @@
-import React, { useEffect, useState } from 'react';
-import MetricCard from './MetricCard';
-import LoadingIndicator from './LoadingIndicator';
-import ErrorIndicator from './ErrorIndicator';
-import { getProducts, getCarts } from '../api/fakeStoreApi';
+import React, { useState, useEffect } from 'react';
+import Metric from './Metrics';
 
 const Dashboard = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [productsCount, setProductsCount] = useState(0);
-  const [ordersCount, setOrdersCount] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [averagePrice, setAveragePrice] = useState(0);
-  const [topSellingProducts, setTopSellingProducts] = useState([]);
+  const [bestSellingProducts, setBestSellingProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchMetrics = async () => {
+    try {
+      const productsResponse = await fetch('https://fakestoreapi.com/products');
+      const productsData = await productsResponse.json();
+      setTotalProducts(productsData.length);
+
+      const ordersResponse = await fetch('https://fakestoreapi.com/carts');
+      const ordersData = await ordersResponse.json();
+      setTotalOrders(ordersData.length);
+
+      const revenue = ordersData.reduce((acc, order) => {
+        const orderTotal = order.products.reduce((total, product) => {
+          const productData = productsData.find(
+            (p) => p.id === product.productId
+          );
+          return total + productData.price * product.quantity;
+        }, 0);
+        return acc + orderTotal;
+      }, 0);
+      setTotalRevenue(revenue);
+
+      const prices = productsData.map((product) => product.price);
+      const average = prices.reduce((acc, price) => acc + price, 0) / prices.length;
+      setAveragePrice(average);
+
+      const bestSelling = productsData.sort((a, b) =>
+        a.orderCount < b.orderCount ? 1 : -1
+      );
+      setBestSellingProducts(bestSelling.slice(0, 5));
+
+      setIsLoading(false);
+    } catch (error) {
+      setError(error);
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const productsResponse = await getProducts();
-        const cartsResponse = await getCarts();
-
-        setProductsCount(productsResponse.length);
-        setOrdersCount(cartsResponse.length);
-
-        const totalPrice = productsResponse.reduce(
-          (total, product) => total + product.price,
-          0
-        );
-        setTotalRevenue(totalPrice);
-
-        setAveragePrice(totalPrice / productsResponse.length);
-
-        const productsSold = cartsResponse.flatMap((cart) => cart.products);
-        const productSales = {};
-        productsSold.forEach((product) => {
-          if (product.id in productSales) {
-            productSales[product.id]++;
-          } else {
-            productSales[product.id] = 1;
-          }
-        });
-        const sortedProducts = Object.entries(productSales).sort(
-          (a, b) => b[1] - a[1]
-        );
-        const topProducts = sortedProducts.slice(0, 5).map((entry) => ({
-          id: entry[0],
-          sales: entry[1],
-        }));
-        setTopSellingProducts(topProducts);
-
-        setIsLoading(false);
-      } catch (error) {
-        setError('Error al cargar los datos del panel de control.');
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchMetrics();
   }, []);
 
+  if (isLoading) {
+    return   <div class="loader">
+    <span class="loader-text">loading</span>
+      <span class="load"></span>
+  </div>;
+  }
+
+  if (error) {
+    return <p>Error: {error.message}</p>;
+  }
+
   return (
-    <div className="dashboard container">
-      <h1 className="dashboard-heading">DASHBOARD</h1>
-      {isLoading && <LoadingIndicator />}
-      {error && <ErrorIndicator message={error} />}
-      {!isLoading && !error && (
-        <div className="metrics-container">
-          <MetricCard
-            title="Total de productos"
-            value={productsCount}
-            color="#FF9800"
-          />
-          <MetricCard
-            title="Total de pedidos realizados"
-            value={ordersCount}
-            color="#FF5722"
-          />
-          <MetricCard
-            title="Ingresos totales generados"
-            value={`$${totalRevenue.toFixed(2)}`}
-            color="#FFC107"
-          />
-          <MetricCard
-            title="Precio promedio de los productos"
-            value={`$${averagePrice.toFixed(2)}`}
-            color="#FFEB3B"
-          />
-          <MetricCard
-            title="Productos más vendidos"
-            value={topSellingProducts.map((product) => (
-              <div key={product.id}>
-                Producto {product.id}: {product.sales} ventas
-              </div>
-            ))}
-            color="#FF9800"
-          />
-        </div>
-      )}
+    <div className="dashboard">
+      <h1 className="dashboard-heading"><img src="/cart.svg" alt="" className='cart'/>DASHBOARD</h1>
+      <div className="dashboard-metrics">
+        <Metric label="Total Products" value={totalProducts} />
+        <Metric label="Total Orders" value={totalOrders} />
+        <Metric label="Total Revenue" value={`$${totalRevenue.toFixed(2)}`} />
+        <Metric label="Average Price" value={`$${averagePrice.toFixed(2)}`} />
+        <Metric label="Best Selling Products" value={bestSellingProducts} />
+      </div>
     </div>
   );
 };
